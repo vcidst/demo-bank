@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Banking Demo - Chat</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .header { background: #007bff; color: white; padding: 10px 20px; margin: -20px -20px 20px -20px; display: flex; justify-content: space-between; align-items: center; }
+        .chat-container { max-width: 800px; margin: 0 auto; }
+        .chat-messages { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; min-height: 400px; max-height: 500px; overflow-y: auto; }
+        .message { margin-bottom: 15px; }
+        .message.user { text-align: right; }
+        .message.bot { text-align: left; }
+        .message-content { display: inline-block; padding: 10px 15px; border-radius: 15px; max-width: 70%; }
+        .message.user .message-content { background: #007bff; color: white; }
+        .message.bot .message-content { background: #e9ecef; color: #333; }
+        .chat-input { display: flex; gap: 10px; }
+        .chat-input input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; }
+        .chat-input button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 20px; cursor: pointer; }
+        .chat-input button:hover { background: #0056b3; }
+        .logout-btn { background: rgba(255,255,255,0.2); color: white; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; }
+        .logout-btn:hover { background: rgba(255,255,255,0.3); }
+        .welcome { text-align: center; color: #666; font-style: italic; margin: 50px 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Banking Assistant</h2>
+        <form method="post" action="/logout" style="display: inline;">
+            <button type="submit" class="logout-btn">Logout</button>
+        </form>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome">Welcome! Ask me about your banking needs.</div>
+        </div>
+        
+        <div class="chat-input">
+            <input type="text" id="messageInput" placeholder="Type your message..." maxlength="500">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        function addMessage(message, sender) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            messageDiv.innerHTML = `<div class="message-content">${message}</div>`;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, 'user');
+            input.value = '';
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message: message})
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addMessage(data.response, 'bot');
+                } else {
+                    addMessage('Sorry, I encountered an error.', 'bot');
+                }
+            } catch (error) {
+                addMessage('Sorry, I cannot connect right now.', 'bot');
+            }
+        }
+
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
