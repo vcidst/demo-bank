@@ -4,6 +4,6 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "python setup_db.py && hypercorn main:app --bind \"[::]:$PORT\""
+    "startCommand": "hypercorn main:app --bind \"[::]:$PORT\""
   }
 }
