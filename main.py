@@ -12,7 +12,7 @@ import httpx
 # Database connection using same environment variables as Rasa
 def get_db_connection():
     return psycopg2.connect(
-        host=os.getenv("DATABASE_URL", "localhost"),
+        host=os.getenv("PGHOST", "localhost"),
         port=os.getenv("PGPORT", "5432"),
         database=os.getenv("POSTGRES_DB", "rasa"),
         user=os.getenv("PGUSER", "rasa"),

@@ -12,7 +12,7 @@ from psycopg2.extras import RealDictCursor
 def get_db_connection():
     """Get database connection using same environment variables as Rasa"""
     return psycopg2.connect(
-        host=os.getenv("DATABASE_URL", "localhost"),
+        host=os.getenv("PGHOST", "localhost"),
         port=os.getenv("PGPORT", "5432"),
         database=os.getenv("POSTGRES_DB", "rasa"),
         user=os.getenv("PGUSER", "rasa"),
