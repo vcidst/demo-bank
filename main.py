@@ -125,7 +125,7 @@ def save_chat_message(user_id: int, message: str, response: str):
 app = FastAPI(title="Banking Demo", description="Simple demo app for Rasa chat")
 templates = Jinja2Templates(directory="templates")
 
-RASA_WEBHOOK_URL = os.getenv("RASA_WEBHOOK_URL", "http://localhost:5005/webhooks/rest/webhook")
+RASA_SERVER_URL = os.getenv("RASA_SERVER_URL", "http://localhost:5005")
 
 # Initialize database on startup
 @app.on_event("startup")
@@ -170,7 +170,7 @@ async def chat_with_rasa(request: Request):
         # Send message to Rasa
         async with httpx.AsyncClient() as client:
             payload = {"sender": user_id, "message": message}
-            response = await client.post(RASA_WEBHOOK_URL, json=payload, timeout=10.0)
+            response = await client.post(f"{RASA_SERVER_URL}/webhooks/rest/webhook", json=payload, timeout=10.0)
             response.raise_for_status()
             rasa_response = response.json()
         
@@ -225,3 +225,54 @@ async def get_chat_history(user_id: int):
     finally:
         if conn:
             conn.close()
+
+@app.get("/api/tracker/{conversation_id}")
+async def get_tracker(conversation_id: str, include_events: str = "ALL"):
+    """Get Rasa tracker for a conversation"""
+    try:
+        params = {"include_events": include_events} if include_events else {}
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{RASA_SERVER_URL}/conversations/{conversation_id}/tracker", 
+                params=params,
+                timeout=10.0
+            )
+            response.raise_for_status()
+            tracker_data = response.json()
+            
+            # Extract conversation history
+            conversation_history = []
+            slots = tracker_data.get("slots", {})
+            
+            for event in tracker_data.get("events", []):
+                if event.get("event") == "user":
+                    conversation_history.append({
+                        "type": "user",
+                        "text": event.get("text", ""),
+                        "timestamp": event.get("timestamp", 0)
+                    })
+                elif event.get("event") == "bot":
+                    conversation_history.append({
+                        "type": "bot", 
+                        "text": event.get("text", ""),
+                        "timestamp": event.get("timestamp", 0)
+                    })
+                else:
+                    conversation_history.append({
+                        "type": "event",
+                        "text": event.get("event", "unknown_event"),
+                        "timestamp": event.get("timestamp", 0)
+                    })
+            
+            # Filter out null/empty slots for display
+            filtered_slots = {k: v for k, v in slots.items() if v is not None and v != "" and k != "flow_hashes"}
+            
+            return {
+                "conversation_id": conversation_id,
+                "conversation_history": conversation_history,
+                "slots": filtered_slots,
+                "raw_tracker": tracker_data
+            }
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching tracker: {str(e)}")
